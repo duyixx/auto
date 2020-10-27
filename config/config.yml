@@ -1,0 +1,32 @@
+excel:
+  file: cases.xlsx
+
+logger:
+  name: "test"
+  logfile: "log_tem.txt"
+  logger_level: "DEBUG"
+  stream_level: "DEBUG"
+  file_level: "INFO"
+
+db_mysql:
+  host: "test.senguo.me"
+  port: 3306
+  user: "test"
+  password: "senguo_mysql"
+  charset: 'utf8'
+
+db_redis:
+  host: "test.senguo.me"
+  port: "6379"
+  auth: "senguo_redis"
+
+db_mongo:
+  host:
+  port:
+
+
+user:
+  mobile_phone: "18162664593"
+  password: "123456"
+
+host: http://pftest.senguo.me
