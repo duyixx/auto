@@ -7,7 +7,7 @@ def get_logger(
         logger_level="DEBUG",
         stream_level="DEBUG",
         file_level="INFO",
-        fmt='%(asctime)s,  loglevel:%(levelname)s,  file "%(filename)s", line:%(lineno)d,  msg:%(message)s',
+        fmt='[%(asctime)s  loglevel:%(levelname)s]  file "%(filename)s":  line:%(lineno)d  msg:%(message)s'
 ):
     # 获取到收集器
     logger = logging.getLogger(logger_name)

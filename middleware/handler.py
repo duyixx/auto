@@ -4,6 +4,8 @@
 # wechat: shoubian01
 # author: 王雨泽
 import os
+
+import requests
 from jsonpath import jsonpath
 from pymysql.cursors import DictCursor
 
@@ -101,15 +103,17 @@ class Handler(object):
     # def loan_id(self):
     #     return self.add_loan()
 
-    def login(self, user):
+    def login(self, user_to_login:dict):
         """登录测试账号"""
-        res = requests_handler.visit(
-            url=Handler.yaml["host"] + "/member/login",
+        url = Handler.yaml["host"] + "/login",
+        _xsrf = requests.request(url=url,method="get").cookies.get("_xsrf")
+        user_to_login["action","_xsrf"]= "phone_password",_xsrf
+        user_cookies = requests_handler.visit(
             method="post",
             headers={"X-Lemonban-Media-Type": "lemonban.v2"},
             # json=Handler.yaml["user"]
-            json=user
-        )
+            json=user_to_login
+        ).cookies
 
         # 提取 token
         # jsonpath
