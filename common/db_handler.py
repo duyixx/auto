@@ -134,11 +134,11 @@ if __name__ == '__main__':
     # )
     # data = db.query("select * from test.student;")
     # print(data)
-    redis = RedisHandler(
-        host="192.168.0.102",
-        port=6379,
-    )
-    print(redis.find_keys())
+    # redis = RedisHandler(
+    #     host="192.168.0.102",
+    #     port=6379,
+    # )
+    # print(redis.find_keys())
     # import redis
     # rd = redis.StrictRedis( host="192.168.0.102",
     #     port=6379,password=123456)
