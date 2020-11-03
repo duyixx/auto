@@ -4,6 +4,7 @@
 # wechat: shoubian01
 # author: 王雨泽
 import os
+from time import sleep
 
 import requests
 from jsonpath import jsonpath
@@ -13,6 +14,18 @@ from common import yaml_handler, excel_handler, logging_handler, requests_handle
 from common.db_handler import MysqlHandler,RedisHandler
 from config import config
 
+
+def trans_cookies(cookie:object):
+    """将cookies转换为k1=v1; k2=v2; k3=v3; ...形式的字符串
+    :param cookie: requests返回的对象:
+    :return: 转换后的cookie字符串
+    """
+    cookie_str=""
+    for key in cookie.keys():
+        if cookie_str:
+            cookie_str+="; "
+        cookie_str+="=".join([str(key),cookie.get(str(key))])
+    return cookie_str
 
 class MysqlHandlerMid(MysqlHandler):
     """读取配置文件的选项， MysqlHandler"""
@@ -87,33 +100,51 @@ class Handler(object):
     MysqlDbClient = MysqlHandlerMid
     RedisDbClient = RedisHandlerMid
 
+    # @property
+    # def token(self):
+    #     return self.login(self.yaml["users"]["user0"])["token"]
     @property
-    def token(self):
-        return self.login(self.yaml["user"])["token"]
-
+    def login_cookie(self):
+        return self.login(self.yaml["users"]["user0"]).cookies
     @property
-    def member_id(self):
-        return self.login(self.yaml["user"])["member_id"]
-
-    @property
-    def admin_token(self):
-        return self.login(self.yaml["admin_user"])["token"]
+    def signer_role_list(self):
+        return self.login(self.yaml["users"]["user0"]).json()["role_list"]
+    #
+    # @property
+    # def admin_token(self):
+    #     return self.login(self.yaml["admin_user"])["token"]
 
     # @property
     # def loan_id(self):
     #     return self.add_loan()
 
-    def login(self, user_to_login:dict):
+    def login(self, user_to_login=None):
         """登录测试账号"""
-        url = Handler.yaml["host"] + "/login",
-        _xsrf = requests.request(url=url,method="get").cookies.get("_xsrf")
-        user_to_login["action","_xsrf"]= "phone_password",_xsrf
-        user_cookies = requests_handler.visit(
+        __host=self.yaml["host"]["pf"]
+        __user=self.yaml["users"]["user0"]
+        url = __host + "/login"
+        login_data=user_to_login
+        if user_to_login is None:
+            login_data=__user
+        # print("url",url)
+        # print("user",login_data)
+        cookie_from_login_web=requests.request(url=url,method="get").cookies
+        login_data["action"] = "phone_password"
+        login_data["_xsrf"]=cookie_from_login_web.get("_xsrf")
+        # print("wenlogincookies:",trans_cookies(cookie_from_login_web))
+        res = requests_handler.visit(
+            url=url,
             method="post",
-            headers={"X-Lemonban-Media-Type": "lemonban.v2"},
-            # json=Handler.yaml["user"]
-            json=user_to_login
-        ).cookies
+            headers={"Cookie": trans_cookies(cookie_from_login_web),
+                     "Origin": "http://pftest.senguo.me",
+                     "Referer": "http://pftest.senguo.me/manage/"},
+            json=login_data
+        )
+        if res.json()["success"]:
+            sleep(1.2)
+            return res
+        else:
+            raise Exception("登录失败")
 
         # 提取 token
         # jsonpath
@@ -200,8 +231,14 @@ if __name__ == '__main__':
     # m_str = '{"member_id": #member_id#,"token":"#token#", "loan_id": #loan_id#, "admin_token": #admin_token#, "random_prop":"#random#"}'
     # a = h.replace_data(m_str)
     # print(a)
-    print(h.MysqlDbClient().query("select * from senguopf.shop where id < 200;"))
-    print(h.RedisDbClient().find_keys())
+    # print(h.MysqlDbClient().query("select * from senguopf.shop where id < 200;"))
+    # print(h.RedisDbClient().find_keys())
+    c=h.login()
+    print(c)
+    print("xx",c.json()["role_list"])
+    print("coo",h.login_cookie)
+    print("t",trans_cookies(h.login_cookie))
+    print("ro",h.signer_role_list)
 
 
 
