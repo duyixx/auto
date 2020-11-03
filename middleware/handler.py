@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-#-*- coding:utf-8 -*-
-# email: wagyu2016@163.com
-# wechat: shoubian01
-# author: 王雨泽
+# -*-coding:utf-8 -*-
+
 import os
 from time import sleep
 
@@ -11,24 +9,26 @@ from jsonpath import jsonpath
 from pymysql.cursors import DictCursor
 
 from common import yaml_handler, excel_handler, logging_handler, requests_handler
-from common.db_handler import MysqlHandler,RedisHandler
+from common.db_handler import MysqlHandler, RedisHandler
 from config import config
 
 
-def trans_cookies(cookie:object):
+def trans_cookies(cookie: object):
     """将cookies转换为k1=v1; k2=v2; k3=v3; ...形式的字符串
     :param cookie: requests返回的对象:
     :return: 转换后的cookie字符串
     """
-    cookie_str=""
+    cookie_str = ""
     for key in cookie.keys():
         if cookie_str:
-            cookie_str+="; "
-        cookie_str+="=".join([str(key),cookie.get(str(key))])
+            cookie_str += "; "
+        cookie_str += "=".join([str(key), cookie.get(str(key))])
     return cookie_str
+
 
 class MysqlHandlerMid(MysqlHandler):
     """读取配置文件的选项， MysqlHandler"""
+
     def __init__(self):
         """初始化所有的配置项，从yaml当中读取
         db:
@@ -41,12 +41,12 @@ class MysqlHandlerMid(MysqlHandler):
         db_mysql_config = Handler.yaml["db_mysql"]
 
         super().__init__(
-                host=db_mysql_config["host"],
-                port=db_mysql_config["port"],
-                user=db_mysql_config["user"],
-                password=db_mysql_config["password"],
-                charset=db_mysql_config["charset"],
-                cursorclass=DictCursor
+            host=db_mysql_config["host"],
+            port=db_mysql_config["port"],
+            user=db_mysql_config["user"],
+            password=db_mysql_config["password"],
+            charset=db_mysql_config["charset"],
+            cursorclass=DictCursor
         )
 
 
@@ -66,10 +66,9 @@ class RedisHandlerMid(RedisHandler):
         )
 
 
-
 class Handler(object):
-
     loan_id = None
+    user_cookie = None
     """初始化所有的数据。
     在其他的模块当中重复使用。
     是从 common 当中实例化对象。
@@ -104,12 +103,18 @@ class Handler(object):
     # def token(self):
     #     return self.login(self.yaml["users"]["user0"])["token"]
     @property
-    def login_cookie(self):
-        return self.login(self.yaml["users"]["user0"]).cookies
-    @property
-    def signer_role_list(self):
-        return self.login(self.yaml["users"]["user0"]).json()["role_list"]
-    #
+    def user_cookie(self, user_to_login=None):
+        """
+        to get a new logined cookie
+        :param user_to_login: eg. {"phone":"12345678901","password":"123456 to encode"}
+        :return: response object
+        """
+        return self.login(user_to_login).cookies
+
+    # @property
+    # def signer_role_list(self):
+    #     return self.login(self.yaml["users"]["user0"]).json()["role_list"]
+
     # @property
     # def admin_token(self):
     #     return self.login(self.yaml["admin_user"])["token"]
@@ -120,17 +125,17 @@ class Handler(object):
 
     def login(self, user_to_login=None):
         """登录测试账号"""
-        __host=self.yaml["host"]["pf"]
-        __user=self.yaml["users"]["user0"]
-        url = __host + "/login"
-        login_data=user_to_login
+        host = self.yaml["host"]["pf"]
+        default_user = self.yaml["users"]["user0"]
+        url = host + "/login"
+        login_data = user_to_login
         if user_to_login is None:
-            login_data=__user
+            login_data = default_user
         # print("url",url)
         # print("user",login_data)
-        cookie_from_login_web=requests.request(url=url,method="get").cookies
+        cookie_from_login_web = requests.request(url=url, method="get").cookies
         login_data["action"] = "phone_password"
-        login_data["_xsrf"]=cookie_from_login_web.get("_xsrf")
+        login_data["_xsrf"] = cookie_from_login_web.get("_xsrf")
         # print("wenlogincookies:",trans_cookies(cookie_from_login_web))
         res = requests_handler.visit(
             url=url,
@@ -144,7 +149,7 @@ class Handler(object):
             sleep(1.2)
             return res
         else:
-            raise Exception("登录失败")
+            raise Exception("登录失败: ", res.json())
 
         # 提取 token
         # jsonpath
@@ -184,17 +189,16 @@ class Handler(object):
         res = requests_handler.visit(
             url=Handler.yaml["host"] + "/loan/add",
             method="post",
-            headers={"X-Lemonban-Media-Type": "lemonban.v2",  "Authorization": self.token},
+            headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
             json=data
         )
 
         # 提取项目的id给审核的用例使用
         return jsonpath(res, "$..id")[0]
 
-
     def audit_loan(self):
         """审核项目"""
-        data = {"loan_id":self.loan_id,"approved_or_not": True}
+        data = {"loan_id": self.loan_id, "approved_or_not": True}
 
         resp = requests_handler.visit(
             url=Handler.yaml["host"] + "/loan/audit",
@@ -207,7 +211,7 @@ class Handler(object):
 
     def recharge(self):
         """充值"""
-        data = {"member_id": self.member_id,"amount":500000}
+        data = {"member_id": self.member_id, "amount": 500000}
 
         resp = requests_handler.visit(
             url=Handler.yaml["host"] + "/member/recharge",
@@ -222,7 +226,7 @@ class Handler(object):
         while re.search(patten, data):
             key = re.search(patten, data).group(1)
             value = getattr(self, key, "")
-            data = re.sub(patten, str(value) , data, 1)
+            data = re.sub(patten, str(value), data, 1)
         return data
 
 
@@ -233,14 +237,12 @@ if __name__ == '__main__':
     # print(a)
     # print(h.MysqlDbClient().query("select * from senguopf.shop where id < 200;"))
     # print(h.RedisDbClient().find_keys())
-    c=h.login()
+    c = h.login()
     print(c)
-    print("xx",c.json()["role_list"])
-    print("coo",h.login_cookie)
-    print("t",trans_cookies(h.login_cookie))
-    print("ro",h.signer_role_list)
-
-
+    print("xx", c.json()["role_list"])
+    hc = h.user_cookie
+    print("coo", hc)
+    print("t", trans_cookies(hc))
 
     # data_path = Handler.conf.DATA_PATH
     # print(Handler.yaml["excel"]["file"])
