@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*-coding:utf-8 -*-
+import copy
 import hashlib
 import os
 from time import sleep
 
 import requests
-from jsonpath import jsonpath
+# from jsonpath import jsonpath
 from pymysql.cursors import DictCursor
 
 from common import yaml_handler, excel_handler, logging_handler, requests_handler
@@ -13,9 +14,9 @@ from common.db_handler import MysqlHandler, RedisHandler
 from config import config
 
 
-def trans_cookies(cookie: object):
+def trans_cookies(cookie):
     """将cookies转换为k1=v1; k2=v2; k3=v3; ...形式的字符串
-    :param cookie: requests返回的对象:
+    :param cookie: requests返回的对象.cookies
     :return: 转换后的cookie字符串
     """
     cookie_str = ""
@@ -103,13 +104,13 @@ class Handler(object):
     # def token(self):
     #     return self.login(self.yaml["users"]["user0"])["token"]
     @property
-    def user_cookie(self, user_to_login=None):
+    def user_cookies(self, user_to_login=None):
         """
         to get a new logined cookie
         :param user_to_login: eg. {"phone":"12345678901","password":"123456 to encode"}
         :return: response object
         """
-        return self.login(user_to_login).cookies
+        return self.__login(user_to_login).cookies
 
     # @property
     # def signer_role_list(self):
@@ -123,46 +124,36 @@ class Handler(object):
     # def loan_id(self):
     #     return self.add_loan()
 
-    def login(self, user_to_login=None):
+    def __login(self, user_to_login=None):
         """登录测试账号"""
-        host = self.yaml["host"]["pf"]
-        default_user = self.yaml["users"]["user0"]
-        m=hashlib.sha256()
-        un = default_user["password"]
-        m.update(un.encode("utf-8"))
-        default_user["password"]=m.hexdigest()
-        url = host + "/login"
-        login_data = user_to_login
-        if user_to_login is None:
-            login_data = default_user
-        # print("url",url)
-        # print("user",login_data)
+        url = self.yaml["host"]["pf"] + "/login"
+        default_user = copy.deepcopy(self.yaml["users"]["user0"])
+        m = hashlib.sha256()
+        m.update(default_user["password"].encode("utf-8"))
+        default_user["password"] = m.hexdigest()
+        data = user_to_login if user_to_login else default_user
         cookie_from_login_web = requests.request(url=url, method="get").cookies
-        login_data["action"] = "phone_password"
-        login_data["_xsrf"] = cookie_from_login_web.get("_xsrf")
-        # print("wenlogincookies:",trans_cookies(cookie_from_login_web))
-        res = requests_handler.visit(
-            url=url,
-            method="post",
-            headers={"Cookie": trans_cookies(cookie_from_login_web),
-                     "Origin": "http://pftest.senguo.me",
-                     "Referer": "http://pftest.senguo.me/manage/"},
-            json=login_data
-        )
+        headers = {"Cookie": trans_cookies(cookie_from_login_web),
+                   "Origin": "http://pftest.senguo.me",
+                   "Referer": "http://pftest.senguo.me/manage/"}
+        data["action"] = "phone_password"
+        data["_xsrf"] = cookie_from_login_web.get("_xsrf")
+        res = requests_handler.visit(url=url, method="post", headers=headers, json=data)
         if res.json()["success"]:
             sleep(1.2)
             return res
         else:
-            raise Exception("登录失败: ", res.json())
+            self.logger.warning("账号{phone}登录失败".format(phone=data["phone"]))
+            raise Exception(res.json())
 
         # 提取 token
         # jsonpath
-        token_str = jsonpath(res, "$..token")[0]
-        token_type = jsonpath(res, "$..token_type")[0]
-        member_id = jsonpath(res, "$..id")[0]
-        token = " ".join([token_type, token_str])
+        # token_str = jsonpath(res, "$..token")[0]
+        # token_type = jsonpath(res, "$..token_type")[0]
+        # member_id = jsonpath(res, "$..id")[0]
+        # token = " ".join([token_type, token_str])
         # 提取 member_id
-        return {"token": token, "member_id": member_id}
+        # return {"token": token, "member_id": member_id}
 
     # def login_admin(self):
     #     """登录admin测试账号"""
@@ -181,70 +172,68 @@ class Handler(object):
     #     # 提取 member_id
     #     return token
 
-    def add_loan(self):
-        data = {"member_id": self.member_id,
-                "title": "木森借钱买飞机",
-                "amount": 2000,
-                "loan_rate": 12.0,
-                "loan_term": 3,
-                "loan_date_type": 1,
-                "bidding_days": 5}
-        # 发送请求，添加项目
-        res = requests_handler.visit(
-            url=Handler.yaml["host"] + "/loan/add",
-            method="post",
-            headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
-            json=data
-        )
+    # def add_loan(self):
+    #     data = {"member_id": self.member_id,
+    #             "title": "木森借钱买飞机",
+    #             "amount": 2000,
+    #             "loan_rate": 12.0,
+    #             "loan_term": 3,
+    #             "loan_date_type": 1,
+    #             "bidding_days": 5}
+    #     # 发送请求，添加项目
+    #     res = requests_handler.visit(
+    #         url=Handler.yaml["host"] + "/loan/add",
+    #         method="post",
+    #         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
+    #         json=data
+    #     )
+    #
+    #     # 提取项目的id给审核的用例使用
+    #     return jsonpath(res, "$..id")[0]
 
-        # 提取项目的id给审核的用例使用
-        return jsonpath(res, "$..id")[0]
-
-    def audit_loan(self):
-        """审核项目"""
-        data = {"loan_id": self.loan_id, "approved_or_not": True}
-
-        resp = requests_handler.visit(
-            url=Handler.yaml["host"] + "/loan/audit",
-            method="patch",
-            headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.admin_token},
-            json=data
-        )
-        print(resp)
-        # return self.loan_id
-
-    def recharge(self):
-        """充值"""
-        data = {"member_id": self.member_id, "amount": 500000}
-
-        resp = requests_handler.visit(
-            url=Handler.yaml["host"] + "/member/recharge",
-            method="post",
-            headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
-            json=data
-        )
-
-    def replace_data(self, data):
-        import re
-        patten = r"#(.*?)#"
-        while re.search(patten, data):
-            key = re.search(patten, data).group(1)
-            value = getattr(self, key, "")
-            data = re.sub(patten, str(value), data, 1)
-        return data
+    # def audit_loan(self):
+    #     """审核项目"""
+    #     data = {"loan_id": self.loan_id, "approved_or_not": True}
+    #
+    #     resp = requests_handler.visit(
+    #         url=Handler.yaml["host"] + "/loan/audit",
+    #         method="patch",
+    #         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.admin_token},
+    #         json=data
+    #     )
+    #     print(resp)
+    #     # return self.loan_id
+    #
+    # def recharge(self):
+    #     """充值"""
+    #     data = {"member_id": self.member_id, "amount": 500000}
+    #
+    #     resp = requests_handler.visit(
+    #         url=Handler.yaml["host"] + "/member/recharge",
+    #         method="post",
+    #         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
+    #         json=data
+    #     )
+    #
+    # def replace_data(self, data):
+    #     import re
+    #     patten = r"#(.*?)#"
+    #     while re.search(patten, data):
+    #         key = re.search(patten, data).group(1)
+    #         value = getattr(self, key, "")
+    #         data = re.sub(patten, str(value), data, 1)
+    #     return data
 
 
 if __name__ == '__main__':
     h = Handler()
-    # m_str = '{"member_id": #member_id#,"token":"#token#", "loan_id": #loan_id#, "admin_token": #admin_token#, "random_prop":"#random#"}'
-    # a = h.replace_data(m_str)
-    # print(a)
-    # print(h.MysqlDbClient().query("select * from senguopf.shop where id < 200;"))
-    # print(h.RedisDbClient().find_keys())
-    c = h.login()
-    print(c)
-    print("xx", c.json()["role_list"])
-    hc = h.user_cookie
+    # m_str = '{"member_id": #member_id#,"token":"#token#", "loan_id": #loan_id#, "admin_token": #admin_token#,
+    # "random_prop":"#random#"}' a = h.replace_data(m_str) print(a) print(h.MysqlDbClient().query("select * from
+    # senguopf.shop where id < 200;")) print(h.RedisDbClient().find_keys())
+    # c = h.login()
+    # print(c.cookies)
+    # print("xx", c.json()["role_list"])
+    hc = h.user_cookies
     print("coo", hc)
     print("t", trans_cookies(hc))
 
