@@ -48,3 +48,7 @@ from middleware import handler
 # print("res4",res4.json())
 #
 #
+import hashlib
+m = hashlib.sha256()
+m.update(b'1234567')
+print(m.hexdigest())

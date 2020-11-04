@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*-coding:utf-8 -*-
+import hashlib
 import os
 from time import sleep
 
@@ -126,6 +127,10 @@ class Handler(object):
         """登录测试账号"""
         host = self.yaml["host"]["pf"]
         default_user = self.yaml["users"]["user0"]
+        m=hashlib.sha256()
+        un = default_user["password"]
+        m.update(un.encode("utf-8"))
+        default_user["password"]=m.hexdigest()
         url = host + "/login"
         login_data = user_to_login
         if user_to_login is None:
