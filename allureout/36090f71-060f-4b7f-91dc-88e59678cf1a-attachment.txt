@@ -1,0 +1,2 @@
+[0;37m[INFO  2020-11-09 02:45:15,413  ] logging_handler.py  line:63  msg:登录成功, 账号：17386049001[0m
+[0;37m[INFO  2020-11-09 02:45:15,463  ] logging_handler.py  line:63  msg:注册成功[0m

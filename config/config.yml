@@ -1,12 +1,12 @@
 excel:
   file: "cases.xlsx"
 
-logger:
-  name: "test"
-  logfile: "log_tem.txt"
+default_logger:
+  name: "test_default"
   logger_level: "DEBUG"
   stream_level: "DEBUG"
   file_level: "INFO"
+  fmt: '[%(levelname)s  %(asctime)s  ] %(filename)s  line:%(lineno)d  msg:%(message)s'
 
 db_mysql:
   host: "test.senguo.me"
@@ -26,9 +26,11 @@ db_mongo:
 
 
 users:
-  user0:
+  default_user:
     phone: "17386049001"
     password: "123456"
 
 host:
   pf: "http://pftest.senguo.me"
+  easy: "http://pftest.senguo.me/easy"
+  center: "http://centertest.senguo.me"

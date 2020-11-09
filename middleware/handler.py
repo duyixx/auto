@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import os
+import types
 from time import sleep
 
 import requests
@@ -25,6 +26,12 @@ def trans_cookies(cookie):
             cookie_str += "; "
         cookie_str += "=".join([str(key), cookie.get(str(key))])
     return cookie_str
+
+
+def tran_pwd(row_pwd: str):
+    m = hashlib.sha256()
+    m.update(row_pwd.encode("utf-8"))
+    return m.hexdigest()
 
 
 class MysqlHandlerMid(MysqlHandler):
@@ -66,10 +73,17 @@ class RedisHandlerMid(RedisHandler):
             auth=db_redis_config["auth"]
         )
 
+    # 提取 token
+    # jsonpath
+    # token_str = jsonpath(res, "$..token")[0]
+    # token_type = jsonpath(res, "$..token_type")[0]
+    # member_id = jsonpath(res, "$..id")[0]
+    # token = " ".join([token_type, token_str])
+    # 提取 member_id
+    # return {"token": token, "member_id": member_id}
+
 
 class Handler(object):
-    loan_id = None
-    user_cookie = None
     """初始化所有的数据。
     在其他的模块当中重复使用。
     是从 common 当中实例化对象。
@@ -86,31 +100,123 @@ class Handler(object):
     excel = excel_handler.ExcelHandler(os.path.join(__excel_path, __excel_file))
 
     # logger
-    __logger_config = yaml["logger"]
-    logger = logging_handler.get_logger(
-        logger_name=__logger_config["name"],
-        logfile=os.path.join(config.LOG_PATH, __logger_config["logfile"]),
-        logger_level=__logger_config["logger_level"],
-        stream_level=__logger_config["stream_level"],
-        file_level=__logger_config["file_level"]
-    )
+    __logger_config = yaml["default_logger"]
+    logger = logging_handler.Logger(__logger_config)
     # mysql 应不应该放到Handler, 不行。 db 对象。
     # 不存储对象，我存储类. TODO: 没有听明白的可以不用这一行，使用的时候直接导入
     # MysqlHandlerMid
     MysqlDbClient = MysqlHandlerMid
     RedisDbClient = RedisHandlerMid
 
+    def request_to_login(self, session, url, data, method="get", headers=None):
+        """登录结果判断"""
+
+        web_aft_login = session.request(url=url, data=data, method=method, headers=headers)
+        if web_aft_login.json()["success"] is None:
+            self.logger.error("登录账号时出现意料之外的情况, user:{}".format(data["phone"]))
+            raise Exception(format(web_aft_login.json()))
+        if web_aft_login.status_code == 200 and web_aft_login.json()["success"] is True:
+            self.logger.info("登录成功, 账号：{}".format(data["phone"]))
+            return session
+        if web_aft_login.json()["success"] is False:
+            self.logger.warning("登录失败, 账号：{}".format(data["phone"]))
+            raise Exception(format(web_aft_login.json()))
+        else:
+            self.logger.error("登录账号时出现意料之外的情况")
+            raise Exception("unknown error: {}".format(web_aft_login.json()))
+
+    def login_backend(self, user_to_login=None):
+        """登录后台测试账号"""
+        session = requests.Session()
+
+        # def backend_switch_shop(session: requests.Session(), sp_id: int):
+        #     """后台切换店铺"""
+        #     res = session.post(
+        #         url='http://centertest.senguo.me/api/shop?method=set_shop_cookie',
+        #         data={"shop_type": "pf", "shop_id": sp_id}
+        #     )
+        #     return res
+        #
+        # def switch_shop(s_self, sp_id):
+        #     """用于切换店铺: session.backend_switch_shop()"""
+        #     return backend_switch_shop(session=session, sp_id=sp_id)
+
+        def switch_shop(s_self, sp_id):
+            res = session.request(
+                url=self.yaml["host"]["center"] + '/api/shop?method=set_shop_cookie',
+                method="post",
+                data={"shop_type": "pf", "shop_id": sp_id}
+            )
+
+        session.switch_shop = types.MethodType(switch_shop, session)
+
+        url = self.yaml["host"]["pf"] + "/login"
+        # request_data
+        web_to_login = session.request(url=url, method="get")
+        default_user = copy.deepcopy(self.yaml["users"]["default_user"])
+        data = user_to_login if user_to_login else default_user
+        data["password"] = tran_pwd(data["password"])
+        data["_xsrf"] = web_to_login.cookies.get("_xsrf")
+        data["action"] = "phone_password"
+        return self.request_to_login(session=session, url=url, data=data, method="post")
+
+    def login_easy(self, user_to_login=None):
+        """登录批发易"""
+        session = requests.Session()
+
+        # def boss_switch_shop(session: requests.Session(), sp_id: int):
+        #     """老板助手切换店铺"""
+        #     res = session.request(
+        #         url="http://pftest.senguo.me/boss/home",
+        #         method="post",
+        #         data={"action": "shop_change", "shop_id": sp_id}
+        #     )
+        #     return res
+        #
+        # def switch_shop(s_self, sp_id):
+        #     """用于切换店铺: session.boss_switch_shop()"""
+        #     return boss_switch_shop(session=session, sp_id=sp_id)
+
+        def switch_shop(s_self, sp_id):
+            res = session.request(
+                url=self.yaml["host"]["pf"] + "/boss/home",
+                method="post",
+                data={"action": "shop_change", "shop_id": sp_id}
+            )
+            return res
+
+        session.switch_shop = types.MethodType(switch_shop, session)
+
+        url = self.yaml["host"]["pf"] + "/api/easy/login/password/"
+        # request_headers
+        # headers = {"Content-Type": "application/json"}
+        # request_data
+        default_user = copy.deepcopy(self.yaml["users"]["default_user"])
+        data = user_to_login if user_to_login else default_user
+        data["password"] = tran_pwd(data["password"])
+        return self.request_to_login(session=session, url=url, data=data, method="post")
+
+    def replace_data(self, data):
+        """用于将用例data中pattern匹配的字符串修改为handler()中以该字符串为名属性的值"""
+        import re
+        patten = r"#(.*?)#"
+        while re.search(patten, data):
+            key = re.search(patten, data).group(1)
+            value = getattr(self, key, "")
+            data = re.sub(patten, str(value), data, 1)
+        return data
+
     # @property
     # def token(self):
     #     return self.login(self.yaml["users"]["user0"])["token"]
-    @property
-    def user_cookies(self, user_to_login=None):
-        """
-        to get a new logined cookie
-        :param user_to_login: eg. {"phone":"12345678901","password":"123456 to encode"}
-        :return: response object
-        """
-        return self.__login(user_to_login).cookies
+    # @property
+    # def user_cookies(self, user_to_login=None):
+    #     """
+    #     to get a new logined cookie
+    #     :param user_to_login: eg. {"phone":"12345678901","password":"123456 to encode"}
+    #     :return: response object
+    #     """
+    #     return self.__login(user_to_login).cookies
 
     # @property
     # def signer_role_list(self):
@@ -124,36 +230,27 @@ class Handler(object):
     # def loan_id(self):
     #     return self.add_loan()
 
-    def __login(self, user_to_login=None):
-        """登录测试账号"""
-        url = self.yaml["host"]["pf"] + "/login"
-        default_user = copy.deepcopy(self.yaml["users"]["user0"])
-        m = hashlib.sha256()
-        m.update(default_user["password"].encode("utf-8"))
-        default_user["password"] = m.hexdigest()
-        data = user_to_login if user_to_login else default_user
-        cookie_from_login_web = requests.request(url=url, method="get").cookies
-        headers = {"Cookie": trans_cookies(cookie_from_login_web),
-                   "Origin": "http://pftest.senguo.me",
-                   "Referer": "http://pftest.senguo.me/manage/"}
-        data["action"] = "phone_password"
-        data["_xsrf"] = cookie_from_login_web.get("_xsrf")
-        res = requests_handler.visit(url=url, method="post", headers=headers, json=data)
-        if res.json()["success"]:
-            sleep(1.2)
-            return res
-        else:
-            self.logger.warning("账号{phone}登录失败".format(phone=data["phone"]))
-            raise Exception(res.json())
-
-        # 提取 token
-        # jsonpath
-        # token_str = jsonpath(res, "$..token")[0]
-        # token_type = jsonpath(res, "$..token_type")[0]
-        # member_id = jsonpath(res, "$..id")[0]
-        # token = " ".join([token_type, token_str])
-        # 提取 member_id
-        # return {"token": token, "member_id": member_id}
+    # def __login(self, user_to_login=None):
+    #     """登录测试账号"""
+    #     url = self.yaml["host"]["pf"] + "/login"
+    #     default_user = copy.deepcopy(self.yaml["users"]["user0"])
+    #     m = hashlib.sha256()
+    #     m.update(default_user["password"].encode("utf-8"))
+    #     default_user["password"] = m.hexdigest()
+    #     data = user_to_login if user_to_login else default_user
+    #     cookie_from_login_web = requests.request(url=url, method="get").cookies
+    #     headers = {"Cookie": trans_cookies(cookie_from_login_web),
+    #                "Origin": "http://pftest.senguo.me",
+    #                "Referer": "http://pftest.senguo.me/manage/"}
+    #     data["action"] = "phone_password"
+    #     data["_xsrf"] = cookie_from_login_web.get("_xsrf")
+    #     res = requests_handler.visit(url=url, method="post", headers=headers, json=data)
+    #     if res.json()["success"]:
+    #         sleep(1.2)
+    #         return res
+    #     else:
+    #         self.logger.warning("账号{phone}登录失败".format(phone=data["phone"]))
+    #         raise Exception(res.json())
 
     # def login_admin(self):
     #     """登录admin测试账号"""
@@ -214,28 +311,39 @@ class Handler(object):
     #         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
     #         json=data
     #     )
-    #
-    # def replace_data(self, data):
-    #     import re
-    #     patten = r"#(.*?)#"
-    #     while re.search(patten, data):
-    #         key = re.search(patten, data).group(1)
-    #         value = getattr(self, key, "")
-    #         data = re.sub(patten, str(value), data, 1)
-    #     return data
 
 
 if __name__ == '__main__':
     h = Handler()
+    # h.logger.info("asdsfasdafasdf")
     # m_str = '{"member_id": #member_id#,"token":"#token#", "loan_id": #loan_id#, "admin_token": #admin_token#,
     # "random_prop":"#random#"}' a = h.replace_data(m_str) print(a) print(h.MysqlDbClient().query("select * from
     # senguopf.shop where id < 200;")) print(h.RedisDbClient().find_keys())
     # c = h.login()
     # print(c.cookies)
     # print("xx", c.json()["role_list"])
-    hc = h.user_cookies
-    print("coo", hc)
-    print("t", trans_cookies(hc))
+    hs1 = h.login_easy({"phone": "17386049001", "password": "123456"})
+    hs2 = h.login_easy({"phone": "18162664593", "password": "senguo2020"})
+    c = hs1.switch_shop(105)
+    hs2.switch_shop(431)
+
+    print(hs1.cookies)
+    print(hs2.cookies)
+    print(hs1.cookies)
+    # print(c)
+
+    # hs3 = h.login_easy({"phone": "17386049010", "password": "123456"})
+    # print(hs3.cookies)
+    # url="http://pftest.senguo.me/api/easy/shop/register/"
+    # data={"shop_name":"qwertyuipfgh0","shop_img":"pfeasy/MTYwNDc4MDEwMzgyMi0xYmU2M2ZhYw==.jpg","business_license":"pfeasy/MTYwNDc4MDEwNjAyMS0zNDgzYzI2Nw==.jpg","shop_province":420000,"shop_city":420100,"shop_county":420106,"shop_address":"asdasd","latitude":30.58108413,"longitude":114.3162001,"inviter_phone":"","description":""}
+    # headers={"Content-Type":"application/json; charset=UTF-8"}
+    # re = hs3.request(url=url,headers=headers, method="post", json=data)
+    # print(re.json())
+    # re = hs.get(url="http://pftest.senguo.me/easy/api/easy/shop/register/")
+    # print(hs.cookies)
+    # print(hs.cookies)
+    # print("coo", hs)
+    # print("t", trans_cookies(hs.cookies))
 
     # data_path = Handler.conf.DATA_PATH
     # print(Handler.yaml["excel"]["file"])
@@ -264,3 +372,5 @@ if __name__ == '__main__':
     # data = '{"loan_id": "#loan_id#", "member_id": "#member_id#"}'
     # new = h.replace_data(data)
     # print(new)
+# data = {"s": 1, "d": 2}
+# h.replace_data(data)

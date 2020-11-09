@@ -34,7 +34,7 @@ class LoginTestCase(unittest.TestCase):
 
     @ddt.data(*test_data)
     def test_invest(self, test_info):
-        # 替换所有的测试数据
+        # 用handler()中同名属性的值替换用例data中被标记的数据
         data = test_info["data"]
         data = env_data.replace_data(data)
         data = eval(data)

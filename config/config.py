@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # email: wagyu2016@163.com
 # wechat: shoubian01
 # author: 王雨泽
@@ -25,4 +25,5 @@ LOG_PATH = os.path.join(ROOT_PATH, "logs")
 
 HOST = "http://pftest.senguo.me"
 
+# 日志配置
 
