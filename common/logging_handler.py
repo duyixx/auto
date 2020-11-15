@@ -48,9 +48,11 @@ class Logger():
 
         # stream_handler.setFormatter(fmt)
 
+# pycharm 使用
     def fontColor(self, color):
         # 不同的终端日志输出不同的颜色
-        formatter = logging.Formatter(color % self.fmt_str)
+        # formatter = logging.Formatter(color % self.fmt_str)
+        formatter = logging.Formatter(self.fmt_str)
         self.stream_handler.setFormatter(formatter)
         self.logger.addHandler(self.stream_handler)
 
@@ -73,6 +75,7 @@ class Logger():
     def critical(self, message):
         self.fontColor('\033[0;30m%s\033[0m')
         self.logger.critical(message)
+
 
 
 if __name__ == '__main__':

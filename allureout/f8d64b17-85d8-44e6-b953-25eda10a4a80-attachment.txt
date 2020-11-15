@@ -1,2 +1,0 @@
-[0;37m[INFO  2020-11-09 03:05:05,147  ] logging_handler.py  line:63  msg:登录成功, 账号：17386049001[0m
-[0;33m[ERROR  2020-11-09 03:05:05,203  ] logging_handler.py  line:71  msg:出错了[0m

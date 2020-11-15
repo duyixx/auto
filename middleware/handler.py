@@ -2,6 +2,7 @@
 # -*-coding:utf-8 -*-
 import copy
 import hashlib
+import json
 import os
 import types
 from time import sleep
@@ -13,6 +14,7 @@ from pymysql.cursors import DictCursor
 from common import yaml_handler, excel_handler, logging_handler, requests_handler
 from common.db_handler import MysqlHandler, RedisHandler
 from config import config
+
 
 
 def trans_cookies(cookie):
@@ -147,6 +149,7 @@ class Handler(object):
                 method="post",
                 data={"shop_type": "pf", "shop_id": sp_id}
             )
+            return res
 
         session.switch_shop = types.MethodType(switch_shop, session)
 
@@ -206,7 +209,10 @@ class Handler(object):
             data = re.sub(patten, str(value), data, 1)
         return data
 
-    # @property
+    def p2u(self,path:str):
+        """拼接项目host和接口路径"""
+        return "".join((self.yaml["host"]["pf"],path))
+# @property
     # def token(self):
     #     return self.login(self.yaml["users"]["user0"])["token"]
     # @property

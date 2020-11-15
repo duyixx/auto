@@ -24,10 +24,11 @@
 #     )
 #     runner.run(suites)
 from datetime import datetime
+from random import random
 
 import pytest
 
 # 注意 datetime 不需要加括号
-ts = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+ts = datetime.now().strftime("%Y%m%d_%H-%M-%S")
 if __name__ == '__main__':
-    pytest.main(["--alluredir=allureout".format(ts), "-m success or fail"])
+    pytest.main(["--alluredir=allureout/report_{}".format(ts), "-m success122","-s"])

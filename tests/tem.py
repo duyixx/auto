@@ -100,13 +100,24 @@ import requests
 
 import pytest
 
-def tf(x):
-    return x+2
+# def tf(x):
+#     return x+2
+#
+# class TestClass:
+#     def test_success(self):
+#         assert tf(2)>3
+#     def test_fail(self):
+#         assert tf(0)>3
 
-class TestClass:
-    def test_success(self):
-        assert tf(2)>3
-    def test_fail(self):
-        assert tf(0)>3
 
-
+url="http://pftest.senguo.me/api/easy/data-center/today_transaction/get"
+data=json.loads('{"to_date":"2020-11-14","data_type":0}')
+from middleware.handler import Handler
+h=Handler()
+easy_session = h.login_easy({"phone":"17386049001","password":"123456"})
+xx = easy_session.switch_shop(465)
+print(xx.json())
+# res=easy_session.request(url=url,method="get",data=data)
+# print(res)
+# print(res.json())
+# print(easy_session.cookies)

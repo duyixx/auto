@@ -1,2 +1,0 @@
-[32mINFO    [0m test:logging_handler.py:63 登录成功, 账号：17386049001
-[31m[1mERROR   [0m test:logging_handler.py:71 出错了
