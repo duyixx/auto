@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>study js</title>
+</head>
+<body>
+    <p onclick="red_element(this)"
+        onmouseover="green_element(this)"
+       onmouseout="black_element(this)"
+    > Hello World</p>
+    <script>
+        // 注释：输入控制台打印信息
+        // 相当于 python print("hello world");
+        console.log("hello world");
+
+        // 变量赋值 variable
+        // let a = 5;
+        var a = 5;
+        console.log(a);
+
+        // 函数的定义和调用
+        function add(a) {
+            if (a > 8) {
+                console.log("无名之辈");
+            }
+            else if (a == 8) {
+                console.log("开始");
+            }
+            else {
+                console.log("随意");
+            }
+        }
+        add(9);
+
+        function red_element(elem) {
+            elem.style.color = "red";
+        };
+
+        function green_element(elem) {
+            elem.style.color = "green";
+        };
+
+        function black_element(elem) {
+            elem.style.color = "black";
+        };
+
+
+    </script>
+</body>
+</html>
