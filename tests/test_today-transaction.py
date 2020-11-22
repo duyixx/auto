@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# email: avgmax@foxmail.com
-# wechat: avgmax
-# author: JhonSmith
+
 import json
-import logging
 
 import pytest
 from middleware.handler import Handler
-
-# logger = logging.getLogger()
-
 
 test_data = Handler.excel.read_data("trans")
 
@@ -35,11 +29,14 @@ class TestTrans():
         method = test_info["method"]
 
         # 请求
-        res = easy_session.request(url=url, params=data, method=method)
+        if method.lower() == "get".lower():
+            res = easy_session.request(url=url, params=data, method=method)
+        else:
+            res = easy_session.request(url=url, data=data, method=method)
 
-        # 断言
+            # 断言
         try:
-            assert res.status_code == expected_status + 1
+            assert res.status_code == 200
         except Exception as e:
             logger.error("状态码错误")
             raise e
