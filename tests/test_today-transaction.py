@@ -36,7 +36,7 @@ class TestTrans():
 
             # 断言
         try:
-            assert res.status_code == 200
+            assert res.status_code == expected_status
         except Exception as e:
             logger.error("状态码错误")
             raise e

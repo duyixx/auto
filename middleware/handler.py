@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 # -*-coding:utf-8 -*-
 import copy
 import hashlib
@@ -14,7 +14,6 @@ from pymysql.cursors import DictCursor
 from common import yaml_handler, excel_handler, logging_handler, requests_handler
 from common.db_handler import MysqlHandler, RedisHandler
 from config import config
-
 
 
 def trans_cookies(cookie):
@@ -209,114 +208,116 @@ class Handler(object):
             data = re.sub(patten, str(value), data, 1)
         return data
 
-    def p2u(self,path:str):
+    def p2u(self, path: str):
         """拼接项目host和接口路径"""
-        return "".join((self.yaml["host"]["pf"],path))
+        return "".join((self.yaml["host"]["pf"], path))
+
+
 # @property
-    # def token(self):
-    #     return self.login(self.yaml["users"]["user0"])["token"]
-    # @property
-    # def user_cookies(self, user_to_login=None):
-    #     """
-    #     to get a new logined cookie
-    #     :param user_to_login: eg. {"phone":"12345678901","password":"123456 to encode"}
-    #     :return: response object
-    #     """
-    #     return self.__login(user_to_login).cookies
+# def token(self):
+#     return self.login(self.yaml["users"]["user0"])["token"]
+# @property
+# def user_cookies(self, user_to_login=None):
+#     """
+#     to get a new logined cookie
+#     :param user_to_login: eg. {"phone":"12345678901","password":"123456 to encode"}
+#     :return: response object
+#     """
+#     return self.__login(user_to_login).cookies
 
-    # @property
-    # def signer_role_list(self):
-    #     return self.login(self.yaml["users"]["user0"]).json()["role_list"]
+# @property
+# def signer_role_list(self):
+#     return self.login(self.yaml["users"]["user0"]).json()["role_list"]
 
-    # @property
-    # def admin_token(self):
-    #     return self.login(self.yaml["admin_user"])["token"]
+# @property
+# def admin_token(self):
+#     return self.login(self.yaml["admin_user"])["token"]
 
-    # @property
-    # def loan_id(self):
-    #     return self.add_loan()
+# @property
+# def loan_id(self):
+#     return self.add_loan()
 
-    # def __login(self, user_to_login=None):
-    #     """登录测试账号"""
-    #     url = self.yaml["host"]["pf"] + "/login"
-    #     default_user = copy.deepcopy(self.yaml["users"]["user0"])
-    #     m = hashlib.sha256()
-    #     m.update(default_user["password"].encode("utf-8"))
-    #     default_user["password"] = m.hexdigest()
-    #     data = user_to_login if user_to_login else default_user
-    #     cookie_from_login_web = requests.request(url=url, method="get").cookies
-    #     headers = {"Cookie": trans_cookies(cookie_from_login_web),
-    #                "Origin": "http://pftest.senguo.me",
-    #                "Referer": "http://pftest.senguo.me/manage/"}
-    #     data["action"] = "phone_password"
-    #     data["_xsrf"] = cookie_from_login_web.get("_xsrf")
-    #     res = requests_handler.visit(url=url, method="post", headers=headers, json=data)
-    #     if res.json()["success"]:
-    #         sleep(1.2)
-    #         return res
-    #     else:
-    #         self.logger.warning("账号{phone}登录失败".format(phone=data["phone"]))
-    #         raise Exception(res.json())
+# def __login(self, user_to_login=None):
+#     """登录测试账号"""
+#     url = self.yaml["host"]["pf"] + "/login"
+#     default_user = copy.deepcopy(self.yaml["users"]["user0"])
+#     m = hashlib.sha256()
+#     m.update(default_user["password"].encode("utf-8"))
+#     default_user["password"] = m.hexdigest()
+#     data = user_to_login if user_to_login else default_user
+#     cookie_from_login_web = requests.request(url=url, method="get").cookies
+#     headers = {"Cookie": trans_cookies(cookie_from_login_web),
+#                "Origin": "http://pftest.senguo.me",
+#                "Referer": "http://pftest.senguo.me/manage/"}
+#     data["action"] = "phone_password"
+#     data["_xsrf"] = cookie_from_login_web.get("_xsrf")
+#     res = requests_handler.visit(url=url, method="post", headers=headers, json=data)
+#     if res.json()["success"]:
+#         sleep(1.2)
+#         return res
+#     else:
+#         self.logger.warning("账号{phone}登录失败".format(phone=data["phone"]))
+#         raise Exception(res.json())
 
-    # def login_admin(self):
-    #     """登录admin测试账号"""
-    #     res = requests_handler.visit(
-    #         url=Handler.yaml["host"] + "/member/login",
-    #         method="post",
-    #         headers={"X-Lemonban-Media-Type": "lemonban.v2"},
-    #         json=Handler.yaml["admin_user"]
-    #     )
-    #
-    #     # 提取 token
-    #     # jsonpath
-    #     token_str = jsonpath(res, "$..token")[0]
-    #     token_type = jsonpath(res, "$..token_type")[0]
-    #     token = " ".join([token_type, token_str])
-    #     # 提取 member_id
-    #     return token
+# def login_admin(self):
+#     """登录admin测试账号"""
+#     res = requests_handler.visit(
+#         url=Handler.yaml["host"] + "/member/login",
+#         method="post",
+#         headers={"X-Lemonban-Media-Type": "lemonban.v2"},
+#         json=Handler.yaml["admin_user"]
+#     )
+#
+#     # 提取 token
+#     # jsonpath
+#     token_str = jsonpath(res, "$..token")[0]
+#     token_type = jsonpath(res, "$..token_type")[0]
+#     token = " ".join([token_type, token_str])
+#     # 提取 member_id
+#     return token
 
-    # def add_loan(self):
-    #     data = {"member_id": self.member_id,
-    #             "title": "木森借钱买飞机",
-    #             "amount": 2000,
-    #             "loan_rate": 12.0,
-    #             "loan_term": 3,
-    #             "loan_date_type": 1,
-    #             "bidding_days": 5}
-    #     # 发送请求，添加项目
-    #     res = requests_handler.visit(
-    #         url=Handler.yaml["host"] + "/loan/add",
-    #         method="post",
-    #         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
-    #         json=data
-    #     )
-    #
-    #     # 提取项目的id给审核的用例使用
-    #     return jsonpath(res, "$..id")[0]
+# def add_loan(self):
+#     data = {"member_id": self.member_id,
+#             "title": "木森借钱买飞机",
+#             "amount": 2000,
+#             "loan_rate": 12.0,
+#             "loan_term": 3,
+#             "loan_date_type": 1,
+#             "bidding_days": 5}
+#     # 发送请求，添加项目
+#     res = requests_handler.visit(
+#         url=Handler.yaml["host"] + "/loan/add",
+#         method="post",
+#         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
+#         json=data
+#     )
+#
+#     # 提取项目的id给审核的用例使用
+#     return jsonpath(res, "$..id")[0]
 
-    # def audit_loan(self):
-    #     """审核项目"""
-    #     data = {"loan_id": self.loan_id, "approved_or_not": True}
-    #
-    #     resp = requests_handler.visit(
-    #         url=Handler.yaml["host"] + "/loan/audit",
-    #         method="patch",
-    #         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.admin_token},
-    #         json=data
-    #     )
-    #     print(resp)
-    #     # return self.loan_id
-    #
-    # def recharge(self):
-    #     """充值"""
-    #     data = {"member_id": self.member_id, "amount": 500000}
-    #
-    #     resp = requests_handler.visit(
-    #         url=Handler.yaml["host"] + "/member/recharge",
-    #         method="post",
-    #         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
-    #         json=data
-    #     )
+# def audit_loan(self):
+#     """审核项目"""
+#     data = {"loan_id": self.loan_id, "approved_or_not": True}
+#
+#     resp = requests_handler.visit(
+#         url=Handler.yaml["host"] + "/loan/audit",
+#         method="patch",
+#         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.admin_token},
+#         json=data
+#     )
+#     print(resp)
+#     # return self.loan_id
+#
+# def recharge(self):
+#     """充值"""
+#     data = {"member_id": self.member_id, "amount": 500000}
+#
+#     resp = requests_handler.visit(
+#         url=Handler.yaml["host"] + "/member/recharge",
+#         method="post",
+#         headers={"X-Lemonban-Media-Type": "lemonban.v2", "Authorization": self.token},
+#         json=data
+#     )
 
 
 if __name__ == '__main__':
