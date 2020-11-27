@@ -25,5 +25,7 @@ LOG_PATH = os.path.join(ROOT_PATH, "logs")
 
 HOST = "http://pftest.senguo.me"
 
+WAIT_TIME = 30
+
 # 日志配置
 

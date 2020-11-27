@@ -513,7 +513,7 @@ webview是原生应用的一种控件，还有其他控件如ImageView、TextVie
     ```python
     desired_capbilities = {
         chromedriverExecutableDir:r"filepath"  # 指定chromedriver的路径自动查找合适的
-        # chromedriverExecutable:r"filepath/chromedriver.exe"}  # 指定文件
+        # chromedriverExecutable:r"filepath/chromedriver_for_87.0.4280.20_in_mac.exe"}  # 指定文件
     ```
 
     
